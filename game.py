@@ -19,6 +19,9 @@ class Direction(Enum):
     UP = 3
     DOWN = 4
     
+# The following line creates a simple class called 'Point' using namedtuple.
+# This allows us to represent a point in 2D space with 'x' and 'y' coordinates,
+# and access them as attributes (e.g., point.x, point.y) instead of using indices.
 Point = namedtuple('Point', 'x, y')
 
 # rgb colors
@@ -39,6 +42,8 @@ class SnakeGameAI:
         # init display
         self.display = pygame.display.set_mode((self.w, self.h))
         pygame.display.set_caption('Snake')
+        # Create a clock object to help control the game's frame rate.
+        # This ensures the game runs at a consistent speed on all machines.
         self.clock = pygame.time.Clock()
         
         self.reset()
@@ -58,6 +63,9 @@ class SnakeGameAI:
         self.direction = Direction.RIGHT
         
         self.head = Point(self.w/2, self.h/2)
+        # Initialize the snake's body with three segments.
+        # The first segment is at the head's position,
+        # and the other two segments are 20 pixels away from the head in the x-direction.
         self.snake = [self.head, 
                       Point(self.head.x-BLOCK_SIZE, self.head.y),
                       Point(self.head.x-(2*BLOCK_SIZE), self.head.y)]
@@ -91,8 +99,12 @@ class SnakeGameAI:
         #         elif event.key == pygame.K_DOWN:
         #             self.direction = Direction.DOWN
         
-        # 2. move
-        self._move(action) # update the head
+        # 2. Move the snake in the direction specified by the action.
+        # This updates the position of the snake's head.
+        self._move(action)  # update the head position based on the action
+
+        # Insert the new head position at the beginning of the snake's body list.
+        # This effectively moves the snake forward by adding a new head segment.
         self.snake.insert(0, self.head)
         
         # 3. check if game over
@@ -112,6 +124,8 @@ class SnakeGameAI:
             reward=10
             self._place_food()
         else:
+            # If the snake did not eat food, remove the last segment of the snake's body.
+            # This keeps the snake the same length as it moves forward.
             self.snake.pop()
         
         # 5. update ui and clock
@@ -135,10 +149,14 @@ class SnakeGameAI:
     def _update_ui(self):
         self.display.fill(BLACK)
         
+        # Draw each segment of the snake on the game display.
+        # The snake is represented as a list of points (self.snake), where each point is a segment.
+        # For each segment, draw a rectangle with the main color (BLUE1) and a smaller rectangle inside (BLUE2) for a visual effect.
         for pt in self.snake:
-            pygame.draw.rect(self.display, BLUE1, pygame.Rect(pt.x, pt.y, BLOCK_SIZE, BLOCK_SIZE))
-            pygame.draw.rect(self.display, BLUE2, pygame.Rect(pt.x+4, pt.y+4, 12, 12))
-            
+            pygame.draw.rect(self.display, BLUE1, pygame.Rect(pt.x, pt.y, BLOCK_SIZE, BLOCK_SIZE))  # Outer rectangle for the snake segment
+            pygame.draw.rect(self.display, BLUE2, pygame.Rect(pt.x+4, pt.y+4, 12, 12))  # Inner rectangle for shading effect
+
+        # Draw the food as a red rectangle at its current position.
         pygame.draw.rect(self.display, RED, pygame.Rect(self.food.x, self.food.y, BLOCK_SIZE, BLOCK_SIZE))
         
         text = font.render("Score: " + str(self.score), True, WHITE)
@@ -149,11 +167,15 @@ class SnakeGameAI:
         #[straight,right,left]
         clock_wise=[Direction.RIGHT,Direction.DOWN,Direction.LEFT,Direction.UP]
         idx=clock_wise.index(self.direction)
-        if np.array_equal(action,[1,0,0]):
-           new_dir=clock_wise[idx] # no change
-        elif np.array_equal(action,[0,1,0]):
-            next_idx=(idx+1)%4
-            new_dir=clock_wise[next_idx]
+        # If the action is [1, 0, 0], it means the snake should keep moving straight in its current direction.
+        # np.array_equal checks if the action array matches [1, 0, 0].
+        if np.array_equal(action, [1, 0, 0]):
+            new_dir = clock_wise[idx]  # No change in direction; continue moving straight.
+        # If the action is [0, 1, 0], it means the snake should turn right relative to its current direction.
+        # To determine the new direction, increment the current direction's index by 1 (modulo 4 to wrap around).
+        elif np.array_equal(action, [0, 1, 0]):
+            next_idx = (idx + 1) % 4  # Calculate the index for the right turn
+            new_dir = clock_wise[next_idx]  # Set the new direction to the right of the current direction
         else:   #[0,0,1]         
             next_idx=(idx-1)%4
             new_dir=clock_wise[next_idx] #left turn r->u->l->d

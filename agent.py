@@ -33,37 +33,47 @@ class Agent:
         dir_u=game.direction==Direction.UP
         dir_d=game.direction==Direction.DOWN
 
-        state=[
-            #danger straight
-           (dir_r and game.is_collision(point_r)) or
-           (dir_l and game.is_collision(point_l)) or
-           (dir_u and game.is_collision(point_u)) or
-           (dir_d and game.is_collision(point_d)),
-            #danger right
+        # The state list encodes the current situation of the snake and the environment as a set of 11 boolean features.
+        # These features are used as input to the neural network for decision making.
+        state = [
+            # 1. Danger straight: Is there a collision if the snake keeps moving in its current direction?
+            (dir_r and game.is_collision(point_r)) or
+            (dir_l and game.is_collision(point_l)) or
+            (dir_u and game.is_collision(point_u)) or
+            (dir_d and game.is_collision(point_d)),
+
+            # 2. Danger right: Is there a collision if the snake turns right from its current direction?
             (dir_u and game.is_collision(point_r)) or
             (dir_d and game.is_collision(point_l)) or
             (dir_l and game.is_collision(point_u)) or
             (dir_r and game.is_collision(point_d)),
-            #danger left
+
+            # 3. Danger left: Is there a collision if the snake turns left from its current direction?
             (dir_u and game.is_collision(point_l)) or
             (dir_d and game.is_collision(point_r)) or
             (dir_l and game.is_collision(point_d)) or
             (dir_r and game.is_collision(point_u)),
-            #move direction
-            dir_l,dir_r,dir_u,dir_d,
-            #food location
 
-            game.food.x<game.head.x,
-            game.food.x>game.head.x,
-            game.food.y<game.head.y,
-            game.food.y>game.head.y
+            # 4-7. Current move direction: One-hot encoding for [left, right, up, down]
+            dir_l,  # Moving left
+            dir_r,  # Moving right
+            dir_u,  # Moving up
+            dir_d,  # Moving down
+
+            # 8-11. Food location relative to the snake's head:
+            game.food.x < game.head.x,  # Food is to the left
+            game.food.x > game.head.x,  # Food is to the right
+            game.food.y < game.head.y,  # Food is above
+            game.food.y > game.head.y   # Food is below
         ]
         return np.array(state,dtype=int)
     def remember(self,state,action,reward,next_state,done):
         self.memory.append((state,action,reward,next_state,done))# popleft is MAX_MEMORY is reached
     def train_long_memory(self):
         if len(self.memory)>BATCH_SIZE:
-            mini_sample=random.sample(self.memory,BATCH_SIZE) # list of tuples
+            # Randomly select a batch of experiences from memory for training.
+            # This helps the model learn from a diverse set of past experiences (experience replay).
+            mini_sample = random.sample(self.memory, BATCH_SIZE)  # list of tuples
         else:
             mini_sample=self.memory
         states,actions,rewards,next_states,dones=zip(*mini_sample)    
@@ -75,7 +85,9 @@ class Agent:
         #random moves:tradeoff exploration/expolotation
         self.epsilon=80-self.n_games  
         final_move=[0,0,0]
-        if random.randint(0,200)<self.epsilon:
+        # If a randomly chosen number between 0 and 200 is less than epsilon,
+        # choose a random move (exploration). Otherwise, use the model to predict the best move (exploitation).
+        if random.randint(0, 200) < self.epsilon:
             move=random.randint(0,2)
             final_move[move]=1
         else:
